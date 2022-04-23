@@ -18,6 +18,8 @@
 CytronMD reel_motor(PWM_DIR, D6, D7);   // feed PWM 2 = Pin 6, DIR 2 = Pin 7.
 //  CytronMD reel_motor(PWM_DIR, D9, D8);   // take-up PWM 1 = Pin 9, DIR 1 = Pin 8.
 
+#define SerialPort Serial
+
 const int hx711_clk = D0;
 const int hx711_dt = D1;
 
@@ -50,7 +52,7 @@ int read_hx711() {
 
 
 void setup() {
-  Serial.begin(115200);
+  SerialPort.begin(115200);
   while (!Serial);
   delay(100);
 
@@ -62,7 +64,7 @@ void setup() {
 void loop() {
   float motor_pwr;
 
-  // read tension arm`
+  // read tension arm`erfe
   oldTension = tension;
   tension = read_hx711();
   
@@ -71,12 +73,12 @@ void loop() {
     tensionDiffAvg = tensionDiffAvg * (1 - tensionAvgCoeff) + tensionDiff * tensionAvgCoeff;
   }
 
-  Serial.print("tension arm: ");
-  Serial.print(tension);
-  Serial.print(" avg diff ");
-  Serial.print(tensionDiffAvg); 
+  SerialPort.print("tension arm: ");
+  SerialPort.print(tension);
+  SerialPort.print(" avg diff ");
+  SerialPort.println(tensionDiffAvg); 
 
-  motor_pwr -= (int16_t)(tensionDiffAvg / 40000);  // feed a little of tension arm to make feed back-tension reduce at end of reel
+  motor_pwr -= (int16_t)(tensionDiffAvg / 40000);  // lower = more tension
 
   reel_motor.setSpeed((int16_t)motor_pwr);
 
