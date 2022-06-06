@@ -2,86 +2,103 @@
 #include "ClearPathMotor.h"
 #include "Arduino.h"
 
-ClearPathMotor::ClearPathMotor(int _enablePin, int _inputAPin, int _inputBPin, int _HLFBPin, String _dirStr){
-  enablePin = _enablePin;
-  inputAPin = _inputAPin;
-  inputBPin = _inputBPin;
-  HLFBPin = _inputBPin;
-  dir = _dirStr;
+const int delayTime = 20; // ms
+
+ClearPathMotor::ClearPathMotor(int _enable, int A, int B, int HLFB, String _name, String _mode, String _dir){
+  enablePin = _enable;
+  inputAPin = A;
+  inputBPin = B;
+  HLFBPin = HLFB; // "Servo On" = enabled and no errors
+  name = _name;   // used for debugging
+  mode = _mode;
+  dir = _dir;
+  enabled = false; // enabled, will respond to commands
+  stopped = true;  // enabled without move commands
+  error = 0;
   target = 0;
 
   pinMode(enablePin, OUTPUT);
   pinMode(inputAPin, OUTPUT);
   pinMode(inputBPin, OUTPUT);
-  // HLFB LOW = MOTOR DISABLED, HIGH = ENABLED
-  pinMode(HLFBPin, INPUT_PULLDOWN); // HLFB+ to MCU Voltage (3.3V for Teensy), HLFB- to DIO pin
+  // HLFB LOW = MOTOR DISABLED, HIGH = ENABLED -- NOT WORKING AS EXPECTED, IGNORED
+  pinMode(HLFBPin, INPUT_PULLUP); 
 
  init();
 }
 
 void ClearPathMotor::init() {
   digitalWrite(enablePin, LOW);
-  while(digitalRead(HLFBPin) == !LOW) {
-    delay(20);
-  }
+  delay(delayTime);
   analogWrite(inputBPin, 0);
   setDirection(dir);
-  delay(20);
 }
 
 void ClearPathMotor::enable() {
   digitalWrite(enablePin, HIGH);
-//   while(digitalRead(HLFBPin) == !HIGH) {
-//    delay(20);
-//  }
-  delay(20);
-  Serial.println("enabled");
-  delay(20);
+  delay(delayTime);
+  enabled = true;
 }
 
 void ClearPathMotor::disable() {
+  // will not respond to commands
+  stop();
   digitalWrite(enablePin, LOW);
-  while(digitalRead(HLFBPin) == !LOW) {
-    delay(20);
-  }
-  Serial.println("disabled");
-  delay(20);
+  delay(delayTime);
+  enabled = false;
 }
 
-void ClearPathMotor::setDirection(String dirStr) {
+void ClearPathMotor::setDirection(String newDir) {
   // HIGH = CW, LOW = CCW
-  if (dirStr == "CW") {
+  if (newDir == "CW") {
     digitalWrite(inputAPin, HIGH);
-    Serial.println("dir set to CW");
-  } else if (dirStr == "CCW") {
-    digitalWrite(inputAPin, LOW);
-    Serial.println("dir set to CCW");
   }
-  delay(20);
+  if (newDir == "CCW") {
+    digitalWrite(inputAPin, LOW);
+  }
+  dir = newDir;
+  delay(delayTime);
 }
 
 void ClearPathMotor::update(int newTarget) {
-  target = constrain(newTarget, 0 , 255);
+  Serial.println("update");
+  if(mode == "VELOCITY") {
+    // max speed set in ClearPath software. 255 = 100% of that value.
+    int adjustedSpeedVal = map(newTarget, 680, 15, 0, 200);
+    target = constrain(adjustedSpeedVal, 0 , 200);
+  }
+  if(mode == "TORQUE") {\
+    Serial.println("update Torque");
+    Serial.println(floor((newTarget/100.0) * 255));
+    // by percent of max torque
+    target = floor((newTarget/100.0) * 255);
+  }
 }
 
 void ClearPathMotor::loop() {
-  analogWrite(inputBPin, target);
-//  if (digitalRead(HLFBPin == LOW)) {
-//    analogWrite(inputBPin, target);
-//  }
+  if (enabled && !error) {
+    analogWrite(inputBPin, target);
+  }
 }
 
 void ClearPathMotor::stop() {
-  digitalWrite(enablePin, LOW);
+  update(0);
+  stopped = true;
 }
 
 void ClearPathMotor::reset() {
+  // toggle enable pin to clear error state
   digitalWrite(enablePin, LOW);
-  delay(15);
+  delay(delayTime);
+  
   digitalWrite(enablePin, HIGH);
-  delay(15);
-  while(digitalRead(HLFBPin == !LOW)) {
-    delay(20);
-  }
+  delay(delayTime);
+  
   digitalWrite(enablePin, LOW);
+  delay(delayTime);
+
+  analogWrite(inputBPin, 0);
+  enabled = false;
+  stopped = true;
+  error = 0;
+  target = 0;
 }
