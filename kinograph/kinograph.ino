@@ -22,9 +22,12 @@
 const int sysEnabledCtrlPin = 33;
 const int sysDirCtrlPin = 35;
 const int sysStartStopCtrlPin = 36;
+const int buttonPin = 20;
 Bounce sysEnabledCtrl = Bounce(sysEnabledCtrlPin, 10);
 Bounce sysDirCtrl = Bounce(sysDirCtrlPin, 10);
 Bounce sysStartStopCtrl = Bounce(sysStartStopCtrlPin, 10);
+Bounce buttonCtrl = Bounce(buttonPin, 10);
+
 
 
 /* State */
@@ -55,7 +58,7 @@ void setup() {
   pinMode(sysEnabledCtrlPin, INPUT_PULLUP);
   pinMode(sysDirCtrlPin, INPUT_PULLUP);
   pinMode(sysStartStopCtrlPin, INPUT_PULLUP);
-
+  pinMode(buttonPin, INPUT_PULLUP);
 
   /* PERF DETECTOR */
   pinMode(perfSignalPin, INPUT);
@@ -134,6 +137,11 @@ void readControls() {
     // HIGH = STOP
     capstanMotor.stop();
     sysStopped = true;
+  }
+  buttonCtrl.update();
+  if (buttonCtrl.fallingEdge()) {
+    Serial.println("BUTTON PRESSED");
+    perfCounter++;
   }
 }
 
