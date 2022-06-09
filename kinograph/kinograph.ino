@@ -5,13 +5,18 @@
    controls class
    add control update() for software input
    implement error handling for motors
-   if anything is on that shouldn't be, refuse to start
+   if anything is on that shouldn't be, refuse to start\
+   conditional loading of libs
+    e.g. "ellapsed" timers built-in to Teensyduino,
+    if !Teensy && Arduino: https://playground.arduino.cc/Code/ElapsedMillis/
+    example: https://github.com/SofaPirate/Chrono/blob/master/Chrono.cpp
+  when using manual control, play/stop is not necessary
+  if manual...no missing perf detection because speed is not static
 */
 
 #include "ClearPathMotor.h"
 #include <Bounce.h>
 
-const bool DEBUG = false;
 
 /* Controls */
 const int sysEnabledCtrlPin = 33;
@@ -34,7 +39,15 @@ ClearPathMotor leftMotor = ClearPathMotor(3, 2, 1, 0, "LEFT", "TORQUE", "CW");
 ClearPathMotor rightMotor = ClearPathMotor(7, 6, 5, 4, "RIGHT", "TORQUE", "CCW");
 
 /* PERF DETECTOR */
-const int perfSignalPin = 41;
+const int perfSignalPin = 37;
+int perfCounter = 1;
+int frameCounter = 0;
+int prevFrameCount;
+
+/* Camera */
+const int camTriggerPin = 32;
+const int camTriggerDuration = 50;
+elapsedMillis timeSinceCamTrigger = camTriggerDuration + 1;  // see "elapsedMillis" test
 
 void setup() {
   /* CONTROL PANEL */
@@ -42,6 +55,7 @@ void setup() {
   pinMode(sysEnabledCtrlPin, INPUT_PULLUP);
   pinMode(sysDirCtrlPin, INPUT_PULLUP);
   pinMode(sysStartStopCtrlPin, INPUT_PULLUP);
+
 
   /* PERF DETECTOR */
   pinMode(perfSignalPin, INPUT);
@@ -54,6 +68,10 @@ void setup() {
   /* MOTORS -- temp */
   leftMotor.update(10);
   rightMotor.update(5);
+
+  /* CAMERA */
+  pinMode(camTriggerPin, OUTPUT);
+  digitalWrite(camTriggerPin, LOW);
 }
 
 void loop() {
@@ -71,23 +89,12 @@ void loop() {
   }
 
   readControls();
+  checkTimers();
 
-//  Serial.println(analogRead(manSpeedAdjPin));
-
-//  Serial.print("sysEnabled: ");
-//  Serial.print(sysEnabled);
-//  Serial.print(", ");
-//  Serial.print("sysStopped: ");
-//  Serial.print(sysStopped);
-
-  Serial.print(leftMotor.target);
-  
-  Serial.println();
-  delay(100);
-}
-
-void initControls() {
-  
+  // Debugging options
+//  printState();
+//  printPerfs();
+//  printTimers();
 }
 
 void readControls() {
@@ -128,4 +135,55 @@ void readControls() {
     capstanMotor.stop();
     sysStopped = true;
   }
+}
+
+
+/* PERF DETECTION ISR */
+void readSprocket() {
+  if (perfCounter % 4 == 0) {
+    triggerCamera();
+    perfCounter = 1;
+  } else {
+    perfCounter++;
+  }
+}
+
+/* CAMERA TRIGGER */
+void triggerCamera() {
+  digitalWrite(camTriggerPin, LOW);
+  timeSinceCamTrigger = 0;
+  digitalWrite(LED_BUILTIN, HIGH);
+  frameCounter ++;
+}
+
+void checkTimers() {
+  if (timeSinceCamTrigger >= camTriggerDuration) {
+    digitalWrite(camTriggerPin, HIGH);
+    digitalWrite(LED_BUILTIN, LOW);
+  }
+}
+
+
+/* DEBUGGING STUFF */
+void printState() {
+//  Serial.print("sysEnabled: ");
+//  Serial.print(sysEnabled);
+//  Serial.print(", ");
+//  Serial.print("sysStopped: ");
+//  Serial.print(sysStopped);
+}
+
+void printPerfs() {
+  Serial.println(perfCounter);
+  if (frameCounter != prevFrameCount) {
+    Serial.print("******** ");
+    Serial.print(frameCounter);
+    Serial.println(" ********");
+    delay(2);
+    prevFrameCount = frameCounter;
+  }
+}
+
+void printTimers() {
+  Serial.println((unsigned long)timeSinceCamTrigger);
 }

@@ -60,15 +60,12 @@ void ClearPathMotor::setDirection(String newDir) {
 }
 
 void ClearPathMotor::update(int newTarget) {
-  Serial.println("update");
   if(mode == "VELOCITY") {
     // max speed set in ClearPath software. 255 = 100% of that value.
     int adjustedSpeedVal = map(newTarget, 680, 15, 0, 200);
     target = constrain(adjustedSpeedVal, 0 , 200);
   }
   if(mode == "TORQUE") {\
-    Serial.println("update Torque");
-    Serial.println(floor((newTarget/100.0) * 255));
     // by percent of max torque
     target = floor((newTarget/100.0) * 255);
   }
