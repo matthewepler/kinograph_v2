@@ -21,25 +21,28 @@
 /* Controls */
 const int sysEnabledCtrlPin = 33;
 const int sysDirCtrlPin = 35;
-const int sysStartStopCtrlPin = 36;
+const int sysPausedCtrlPin = 36;
 const int buttonPin = 20;
 Bounce sysEnabledCtrl = Bounce(sysEnabledCtrlPin, 10);
 Bounce sysDirCtrl = Bounce(sysDirCtrlPin, 10);
-Bounce sysStartStopCtrl = Bounce(sysStartStopCtrlPin, 10);
+Bounce sysPausedCtrl = Bounce(sysPausedCtrlPin, 10);
 Bounce buttonCtrl = Bounce(buttonPin, 10);
 
 
-
-/* State */
-volatile bool sysEnabled;
-volatile bool sysStopped;
+ /* System State */
+  // For safety, the state of manual control switches are ignored
+  // on startup so that it doesn't start right away. If either of 
+  // the manual controls for these are "on," they will need to be
+  // toggled off and then on again to start working.
+volatile bool sysEnabled = false; // tension is on
+volatile bool sysPaused = true; // tension is on but film is not moving
 
 /* Motors */
 volatile bool manSpeedCtrl = true; // speed set with hardware control
 const int manSpeedAdjPin = 14;     // manual speed adjustment via hardware (knob, pedal, etc)
-ClearPathMotor capstanMotor = ClearPathMotor(11, 10, 9, 8, "CAPSTAN", "VELOCITY", "CCW");
-ClearPathMotor leftMotor = ClearPathMotor(3, 2, 1, 0, "LEFT", "TORQUE", "CW");
-ClearPathMotor rightMotor = ClearPathMotor(7, 6, 5, 4, "RIGHT", "TORQUE", "CCW");
+ClearPathMotor capstanMotor = ClearPathMotor(11, 10, 9, 8, "CAPSTAN", "VEL", "CCW");
+ClearPathMotor leftMotor = ClearPathMotor(3, 2, 1, 0, "LEFT", "TOR", "CW");
+ClearPathMotor rightMotor = ClearPathMotor(7, 6, 5, 4, "RIGHT", "TOR", "CCW");
 
 /* PERF DETECTOR */
 const int perfSignalPin = 37;
@@ -57,20 +60,12 @@ void setup() {
   pinMode(manSpeedAdjPin, INPUT);
   pinMode(sysEnabledCtrlPin, INPUT_PULLUP);
   pinMode(sysDirCtrlPin, INPUT_PULLUP);
-  pinMode(sysStartStopCtrlPin, INPUT_PULLUP);
+  pinMode(sysPausedCtrlPin, INPUT_PULLUP);
   pinMode(buttonPin, INPUT_PULLUP);
 
   /* PERF DETECTOR */
   pinMode(perfSignalPin, INPUT);
   attachInterrupt(perfSignalPin, readSprocket, FALLING);
-
-  /* SYSTEM STATE */
-  sysEnabled = false;
-  sysStopped = true; // even if the control is not @ "STOP" position;
-
-  /* MOTORS -- temp */
-  leftMotor.update(10);
-  rightMotor.update(5);
 
   /* CAMERA */
   pinMode(camTriggerPin, OUTPUT);
@@ -78,38 +73,41 @@ void setup() {
 }
 
 void loop() {
+  readControls();
+  checkTimers();
+  
   if (sysEnabled) {
     leftMotor.loop();
     rightMotor.loop();
-    if (sysStopped) {
-      capstanMotor.stop();
-    } else {
-      if (manSpeedCtrl) {
-        capstanMotor.update(analogRead(manSpeedAdjPin));
-      }
-      capstanMotor.loop();
+    capstanMotor.loop();
+
+    if (manSpeedCtrl && !sysPaused) {
+      capstanMotor.update(analogRead(manSpeedAdjPin));
     }
   }
 
-  readControls();
-  checkTimers();
-
+  
   // Debugging options
-//  printState();
+//  printSysState();
 //  printPerfs();
 //  printTimers();
+//  capstanMotor.debug();
+//  leftMotor.debug();
 }
 
 void readControls() {
   // -- SYSTEM ENABLED -- //
+  // If machine is enabled on startup, it is ignored and
+  // you must toggle the control to turn it on
   sysEnabledCtrl.update();
   if (sysEnabledCtrl.risingEdge()) {
 //    Serial.println("RISING");
     // HIGH = OFF
     leftMotor.disable();
-    rightMotor.disable();
+    rightMotor.disable();    capstanMotor.stop(); // TODO << this should be unecessary
     capstanMotor.disable();
     sysEnabled = false;
+    sysPaused = true;
   } else if (sysEnabledCtrl.fallingEdge()) {
 //    Serial.println("FALLING");
     // LOW = ON
@@ -117,7 +115,9 @@ void readControls() {
     rightMotor.enable();
     capstanMotor.enable();
     sysEnabled = true;
+    sysPaused = true; // never want "enable" to be the go button
   }
+  
   // -- SYSTEM DIRECTION -- //
   sysDirCtrl.update();
   if (sysDirCtrl.fallingEdge()) {
@@ -128,20 +128,31 @@ void readControls() {
     capstanMotor.setDirection("CW");
   }
 
-  // -- SYSTEM START/STOP -- //
-  sysStartStopCtrl.update();
-  if (sysStartStopCtrl.fallingEdge()) {
+  // -- SYSTEM PAUSE/START -- //
+  // If machine is on "START" @ startup, it is ignored and
+  // you must toggle the control to turn it ong
+  sysPausedCtrl.update();
+  if (sysPausedCtrl.fallingEdge()) {
+//    Serial.println("FALLING = UN-PAUSE");
     // LOW = GO
-    sysStopped = false;
-  } else if (sysStartStopCtrl.risingEdge()) {
+    sysPaused = false;
+    capstanMotor.start();
+  } else if(sysPausedCtrl.risingEdge()) {
+//    Serial.println("RISING = PAUSE");
     // HIGH = STOP
+    sysPaused = true;
     capstanMotor.stop();
-    sysStopped = true;
   }
+  // -- AUX BUTTON -- /
   buttonCtrl.update();
   if (buttonCtrl.fallingEdge()) {
-    Serial.println("BUTTON PRESSED");
-    perfCounter++;
+    if (sysPaused) {
+      capstanMotor.reset();
+      leftMotor.reset();
+      rightMotor.reset();
+    } else {
+      perfCounter++;
+    }
   }
 }
 
@@ -171,14 +182,15 @@ void checkTimers() {
   }
 }
 
-
 /* DEBUGGING STUFF */
-void printState() {
-//  Serial.print("sysEnabled: ");
-//  Serial.print(sysEnabled);
-//  Serial.print(", ");
-//  Serial.print("sysStopped: ");
-//  Serial.print(sysStopped);
+void printSysState() {
+  Serial.print("sysEnabled: ");
+  Serial.print(sysEnabled);
+  Serial.print(", ");
+  Serial.print("sysStopped: ");
+  Serial.print(sysPaused);
+  Serial.println();
+  delay(2);
 }
 
 void printPerfs() {
@@ -187,6 +199,7 @@ void printPerfs() {
     Serial.print("******** ");
     Serial.print(frameCounter);
     Serial.println(" ********");
+    Serial.println();
     delay(2);
     prevFrameCount = frameCounter;
   }
@@ -194,4 +207,5 @@ void printPerfs() {
 
 void printTimers() {
   Serial.println((unsigned long)timeSinceCamTrigger);
+  delay(2);
 }

@@ -1,16 +1,26 @@
 /*
  * Basic test for Teknic ClearPath motor
  * Mode = Torque or Velocity, PWM Unipolar mode
+ * Connector wiring:
+ * PIN   COLOR   FUNCTION
+ *  1     GRN     HLFB +
+ *  2     BLK     INPUT B +
+ *  3     WHIT    INPUT A +
+ *  4     BLU     ENABLE +
+ *  5     RED     HLFB -
+ *  6     YEL     INPUT B -
+ *  7     BRN     INPUT A -
+ *  8     ORN     ENABLE -
  */
 
-const int Enable = 11;
-const int InputA =10;
-const int InputB = 9;
-const int HLFB = 8;
+const int Enable = 3;
+const int InputA = 2;
+const int InputB = 1;
+const int HLFB = 0;
 const int myLED = 13;
 
 int startSpeed = 10;
-int usePot = true;
+int usePot = false;
 int potPin = A0;
 
 void setup() {

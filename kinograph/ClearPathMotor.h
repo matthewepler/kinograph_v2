@@ -15,22 +15,23 @@ class ClearPathMotor {
     String name;
     String mode;
     String dir;
-     
     bool enabled;
     bool stopped;
-    int error;
 
   public:
     ClearPathMotor(int _enable, int A, int B, int HLFB, String _name, String _mode, String _dirStr);
     int target;
+    int curr;
     void init();
     void enable();
     void disable();
+    void start();
+    void stop();
+    void reset();
     void setDirection(String newDir);
     void update(int newTarget);
     void loop();
-    void stop();
-    void reset();
+    void debug();
 };
 
 #endif
