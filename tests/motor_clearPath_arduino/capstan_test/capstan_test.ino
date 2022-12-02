@@ -2,15 +2,28 @@
  * Test for Teknic motor in any PWM Unipolar mode
  * with potentiometer for manual speed adjustment.
  * 
+ * Connector wiring:
+ * PIN   COLOR   FUNCTION
+ *  1     GRN     HLFB +
+ *  2     BLK     INPUT B +
+ *  3     WHIT    INPUT A +
+ *  4     BLU     ENABLE +
+ *  5     RED     HLFB -
+ *  6     YEL     INPUT B -
+ *  7     BRN     INPUT A -
+ *  8     ORN     ENABLE -
+ *  
+ *  Note: HLFB requires its own power source. See ClearPath docs.
  */
+ 
 const int Enable = 7;
 const int InputA = 6;
 const int InputB = 5;
-//const int HLFB = 8; // can't get this to work as expected
+//const int HLFB = 3; // can't get this to work as expected
 const int potPin = 14;
 const int dwellTime = 100; // ms
 
-bool manSpeedCtrl = false;
+bool usePot = false;
 
 void setup() {
 //  pinMode(HLFB, INPUT_PULLUP);
@@ -36,7 +49,7 @@ void setup() {
 void loop() {
   int signalVal;
   
-  if (!manSpeedCtrl) {
+  if (!usePot) {
     signalVal = 20;
   } else {
     int potVal = analogRead(potPin);
@@ -44,7 +57,7 @@ void loop() {
     signalVal = constrain(mapVal, 0, 255);
   }
 
-  Serial.println(signalVal);
+//  Serial.println(signalVal);
 
   analogWrite(InputB, signalVal);
 }
