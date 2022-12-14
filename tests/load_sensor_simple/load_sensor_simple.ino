@@ -1,4 +1,4 @@
-// Tension sensor test - simple
+// Load sensor test - simple
 // Based off of example "Read_1x_load_call" from HX711_ADC lib: https://github.com/olkal/HX711_ADC
 
 #include "HX711.h"
