@@ -1,11 +1,21 @@
 /*
  * NOTE: if using an Arduino Uno, you must disconnect wires
  * from Tx/Rx pins during code upload, or it will not work.
+
+   Moving average code from: https://maker.pro/arduino/tutorial/how-to-clean-up-noisy-sensor-data-with-a-moving-average-filter
 */
 
 
 
 #include <EasyTransfer.h>
+#define WINDOW_SIZE 5
+
+// moving average filter to remove noise from readings
+int INDEX = 0;
+int VALUE = 0;
+int SUM = 0;
+int READINGS[WINDOW_SIZE];
+int AVERAGED = 0;
 
 //create two objects
 EasyTransfer CNTRL_in, CNTRL_out; 
@@ -42,22 +52,38 @@ void setup(){
 }
 
 void loop(){
+  int potVal = analogRead(potPin);
   
-  //first, lets read our potentiometer and button and store it in our data structure
-  txdata.potVal = analogRead(potPin);
+  // for mapping, determine the value of the sensor in two positions:
+  // at rest (low map val), and at max tension (high map val)
+  int mappedVal = map(potVal, 0, 1023, 750, 700);
   
+  // reduce noise by averaging readings, save for transmission
+  txdata.potVal = movingAverage(mappedVal);
   
   if(!digitalRead(buttonPin))
     txdata.buttonstate = HIGH;
   else
     txdata.buttonstate = LOW;
  
+ 
   if (CNTRL_in.receiveData()) {
     if (rxdata.poll) {
+      Serial.println("sending...");
       CNTRL_out.sendData();
     }
   }
  
-  //delay for good measure
+  // If not polling before sending data,
+  // delay must be longer than time it takes to complete loop() on main board
   delay(10);
+}
+
+int movingAverage(int latestReading) {
+  SUM = SUM - READINGS[INDEX];       // Remove the oldest entry from the sum
+  READINGS[INDEX] = latestReading;       // Add the newest reading to the window
+  SUM = SUM + latestReading;                 // Add the newest reading to the sum
+  INDEX = (INDEX+1) % WINDOW_SIZE;   // Increment the index, and wrap to 0 if it exceeds the window size
+  AVERAGED = (int) SUM / WINDOW_SIZE;      // Divide the sum of the window by the window size for the result
+  return AVERAGED;
 }
