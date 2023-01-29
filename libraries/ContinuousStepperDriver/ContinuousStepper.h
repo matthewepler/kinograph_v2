@@ -19,6 +19,7 @@ public:
     if (enablePin != NULL_PIN)
       pinMode(enablePin, OUTPUT);
     powerOn();
+    digitalWrite(_dirPin, LOW); // default dir = CCW
   }
 
   void loop() {
@@ -27,15 +28,21 @@ public:
 
     time_t t = now();
     time_t elapsed = t - _lastTick;
-
     if (elapsed > _interval) {
       if (_status == STEP) {
-        digitalWrite(_dirPin, _currentSpeed >= 0 ? HIGH : LOW);
         step();
       }
-
       _lastTick = t;
       updateSpeed();
+    }
+  }
+
+  void setDir(String dirStr) {
+    // HIGH == Clockwise, LOW = Counter Clockwise
+    if (dirStr == "CW") {
+      digitalWrite(_dirPin, HIGH);
+    } else if (dirStr == "CCW") {
+      digitalWrite(_dirPin, LOW);
     }
   }
 

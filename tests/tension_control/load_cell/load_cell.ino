@@ -9,8 +9,10 @@ MovingAveragePlus<unsigned> average(10);
 const double interval = 300; // ms
 double prevTime = 0;
 unsigned int _offset;
-//const int _offset = 195; // left is 248, right is195 
 const int _scale = 1000;
+
+unsigned int minVal;
+unsigned int maxVal;
 
 
 void setup() {
