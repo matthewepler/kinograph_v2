@@ -6,16 +6,17 @@
  * 
  * Circuit for FLIR 6 pin camera:
  * 
- * RED -> PIN (INPUT), LOW = Trigger
+ * Red + Brown = Line 2 (Flir Blackfly)
+ * RED -> PIN (INPUT_PULLUP, 3.3 or 5V)
  * BROWN -> 1K res -> GND
  */
 
 #include <Bounce.h>
 
-const int buttonPin = 20;
-const int triggerPin = 32;
+const int buttonPin = 22;
+const int triggerPin = 15;
 
-Bounce buttonCtrl = Bounce(buttonPin, 10);
+Bounce buttonCtrl = Bounce(buttonPin, 20);
 
 
 void setup() {
@@ -28,6 +29,9 @@ void setup() {
 
 void loop() {
   buttonCtrl.update();
+  if(buttonCtrl.risingEdge()) {
+    Serial.println("rising");
+  }
   if (buttonCtrl.fallingEdge()) {
     Serial.println("falling");
     digitalWrite(triggerPin, LOW);

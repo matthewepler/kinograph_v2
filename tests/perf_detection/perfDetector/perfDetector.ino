@@ -6,11 +6,11 @@
  * 
  * BROWN ---- 24V+
  * BLACK ---- 1K res --┬-- 180 res ---- GND
- *                    PIN
+ *                    PIN (3.66 V+)
  * BLUE ----GND
  */
 
-const int perfSignalPin = 37;
+const int perfSignalPin = 14;
 int counter = 0;
 int prevCounter = 0;
 

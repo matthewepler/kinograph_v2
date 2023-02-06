@@ -1,6 +1,8 @@
-#include "Config.h"
-#include "ContinuousStepper.h"
+#include <ContinuousStepper.h>
 
+const int stepPin = 10;
+const int dirPin = 9;
+const int enablePin = 8;
 ContinuousStepper stepper(stepPin, dirPin, enablePin);
 // ^ motor enabled by default
 
@@ -8,8 +10,8 @@ const int potPin = 16;
 
 void setup() {
 
-  Serial.begin(115200);
-  while (!Serial) {};
+//  Serial.begin(115200);
+//  while (!Serial) {};
 
   stepper.setPulseWidth(2);  // Increase this value if the motor doesn't move
   stepper.setAcceleration(4000);

@@ -4,8 +4,8 @@
  */
  
 const int camTriggerPin = 32;
-const int camTriggerDuration = 50;
-elapsedMillis timeSinceCamTrigger = camTriggerDuration + 1;  // see "elapsedMillis" test
+const int camDelay = 50;
+elapsedMillis timeSinceCamTrigger = camDelay + 1;  // see "elapsedMillis" test
 volatile bool camFlag = false;
 
 const int perfSignalPin = 37;
@@ -22,7 +22,7 @@ int prevFrameCount;
 }
 
 void loop() {
-  if (timeSinceCamTrigger >= camTriggerDuration) {
+  if (timeSinceCamTrigger >= camDelay) {
     digitalWrite(camTriggerPin, HIGH);
     digitalWrite(LED_BUILTIN, LOW);
   }

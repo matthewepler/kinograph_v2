@@ -43,15 +43,32 @@ const int speedPotPin = 16;
 //const int t_torqueAdjPin = 17; // TODO
 
 bool calibrated = true;
-bool debug = true;
+bool debug = false;
+
+// Cam + perf sensor
+const int triggerPin = 15;
+const int perfSignalPin = 14;
+const int ledPin = 23;
+int perfCounter = 1;
+int frameCounter = 0;
+int prevFrameCount;
+int camDelay = 50; // micro seconds
+elapsedMillis timeSinceCamTrigger = camDelay + 1; // this sets condition to trigger in the first loop
 
 
 void setup() {
-  while (!Serial) {};
+//  while (!Serial) {};
   
   pinMode(speedPotPin, INPUT);
 //  pinMode(f_torqueAdjPin, INPUT);
 //  pinMode(t_torqueAdjPin, INPUT);
+ 
+  // cam + perf sensor
+  pinMode(ledPin, OUTPUT);
+  pinMode(triggerPin, OUTPUT);
+  pinMode(perfSignalPin, INPUT);
+  digitalWrite(triggerPin, HIGH);
+  attachInterrupt(perfSignalPin, readSprocket, FALLING);
 
   initMotors();
 
@@ -66,10 +83,18 @@ void setup() {
   t_offset = t_hx711.readAverage(10);
   f_output = f_offset / (f_offset > 100000 ? 100: 10);
   t_output = t_offset / (t_offset > 100000 ? 100: 10);
+
+  
 }
 
 void loop() {
   adjustSpeed();
+
+  if (timeSinceCamTrigger > camDelay) {
+    // adds a little delay since we can't use delay in the interrupt routine
+    digitalWrite(triggerPin, HIGH);
+    digitalWrite(ledPin, LOW) ;
+  }
 
   f_hx711.update();
   t_hx711.update();
@@ -145,6 +170,24 @@ void adjustSpeed() {
     }
   }
   stepper.loop();
+}
+
+/* PERF DETECTION ISR */
+void readSprocket() {
+  if (perfCounter % 4 == 0) {
+    triggerCamera();
+    perfCounter = 1;
+  } else {
+    perfCounter++;
+  }
+}
+
+/* CAMERA TRIGGER */
+void triggerCamera() {
+  digitalWrite(triggerPin, LOW);
+  digitalWrite(ledPin, HIGH);
+  timeSinceCamTrigger = 0;
+  frameCounter ++;
 }
 
 void initMotors() {

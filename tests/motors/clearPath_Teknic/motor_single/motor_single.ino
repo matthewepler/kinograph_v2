@@ -17,31 +17,28 @@
  #include <Bounce2.h>
 Bounce bounce = Bounce();
 
+// Take-up Motor
+ const int Enable = 2;
+ const int InputA = 3;
+ const int InputB = 4;
 
-// const int Enable = 20;
-// const int InputA = 21;
-// const int InputB = 22;
-// const int HLFB = A9; // 23
+// Feed Motor
+//const int Enable = 31;
+//const int InputA = 32;
+//const int InputB = 33;
 
-const int Enable = 34;
-const int InputA = 35;
-const int InputB = 36;
-// const int HLFB = A9; // 23
-
-const int startSpeed = 10;
+const int startSpeed = 10; // TODO: change name to account for torque or other non-speed modes
 const bool usePot = true;
-const int potPin = A2; // 16
+const int potPin = 16;
 int speedVal;
 
-const int resetButtonPin = 37;
+const int resetButtonPin = 22;
 
 void setup() {
-  Serial.begin(9600);
-
   pinMode(Enable, OUTPUT);
   pinMode(InputA, OUTPUT);
   pinMode(InputB, OUTPUT);
-  // pinMode(resetButtonPin, INPUT_PULLUP);
+
   bounce.attach( resetButtonPin ,  INPUT_PULLUP ); // USE INTERNAL PULL-UP
   bounce.interval(5); // interval in ms
 
@@ -53,7 +50,7 @@ void setup() {
   delay(10);
 
   // set direction. HIGH = CW
-  digitalWrite(InputA, HIGH);
+  digitalWrite(InputA, LOW);
 }
 
 void loop() {
@@ -70,6 +67,7 @@ void loop() {
   analogWrite(InputB, speedVal);
   
   Serial.println(speedVal);
+  delay(10);
 }
 
 void checkButton() {

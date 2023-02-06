@@ -1,8 +1,9 @@
 #include <NBHX711.h>
 
-NBHX711 hx711(29, 30);
+NBHX711 hx711(24, 25); // dat, clk
+
 void setup() {
-  Serial.begin(9600);
+//  Serial.begin(9600);
   hx711.begin();
 }
 
